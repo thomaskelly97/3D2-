@@ -9,8 +9,8 @@ start
 	LDR r4, =0
 	LDR r5, =0 
 	LDR r6, =0
-	LDR r7, =10000
-	LDR r8, =1000
+	LDR r7, =0 ; gets reset later
+	LDR r8, =0
 	LDR r9, =100 
 	LDR r10,=8 ;Just need it for a sec, redefined near line 35
 	LDR r11,=1 
@@ -32,7 +32,9 @@ initl
 	BNE initl
 skip000
 	;NOW r4, has the amount of '0000' periods before we hit a nonzero 
+	
 	SUB r4,r10,r4 ;Now it has the amount of F periods we need 
+	MOV r2,r4 ;copy r4 into r2, counts amt of non-zero parts 
 	SUB r4,r4,#1 ;CORRECT 
 	
 	;THIS PART GENERATES F's the SAME LENGTH AS INPUT 
@@ -47,22 +49,35 @@ Floop
 	 
 	
 	;DETERMINE WHICH SIGN. USE r3 =0 for POSITIVE, r3 = 1 for NEGATIVE 
+	LDR r8,=4 ;store in r3, as r3 gets mapped over in then next few lines 
+	MUL r7,r2,r8 
+	SUB r7,r7,#1 
 	MOV r3,r1 ;make a copy 
-	MOV r3,r3,LSR #31 ;****THE PROBLEM IS HERE, WE AREN'T CHECKING THE FIRST BIT**** 
+	MOV r3,r3,LSR r7 
 	AND r3,r3,r11 ;AND with 0001 
 	
 	CMP r3,#0 ;If r3 is 0 then the number is positive 
 	BEQ skip00 ;if r3 == 0 skip this
 	MOV r3, #1 ;Put 1 in r3 to signify negative number NEGATIVE 
 	SUB r1,r10,r1 ;Take away using previously calculated shite 
+	ADD r1,r1,#1 ;Correct 
+	;push minus to stack
+	LDR r2, =0xB ;signifies minus 
+	SUB r13,r13, #4 
+	STR r2, [r13] 
 skip00  
 	CMP r3, #1 ;If r3 == 1 then skip this
 	BEQ skip01
 	MOV r3,#0 ;POSTIVIE 
+	LDR r2, =0xA ;signifies plus 
+	SUB r13,r13,#4 
+	STR r2, [r13] 
 skip01
 	
 	;CALCULATE THE NUMBER HEX -> DECIMAL 
 	LDR r10,=10
+	LDR r8,=1000
+	LDR r7, =10000
 	LDR r2,=0 
 loop
 	CMP r7,r1 ;If r7 > r1 we will get negative so skip this 
@@ -122,7 +137,8 @@ skip4
 	STR r2, [r13, #-4]!
 	ADD r13,r13,#20 ;Reset the stack pointer 
 	MOV r2,#0
-	
+
+;THIS PART TAKES NUMBERS FROM STACK 1 by 1 INTO R6, INCLUDING SIGN INDICATION FIRST!!! 
 	LDR r4, =8  
 loop5 
 	LDR r6, [r13],#-4 ;Loop down through the number in order 
